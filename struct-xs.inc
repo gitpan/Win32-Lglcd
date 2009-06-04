@@ -1,0 +1,8 @@
+typedef lgLcdDeviceDesc DeviceDesc;
+typedef lgLcdDeviceDescEx DeviceDescEx;
+typedef lgLcdConfigureContext ConfigureContext;
+typedef lgLcdNotificationContext NotificationContext;
+typedef lgLcdSoftbuttonsChangedContext SoftbuttonsChangedContext;
+typedef lgLcdConnectContext ConnectContext;
+typedef lgLcdConnectContextEx ConnectContextEx;
+typedef lgLcdOpenContext OpenContext;

@@ -1,0 +1,8 @@
+Revision history for Perl extension Win32::Lglcd.
+
+0.01  Mon Sep  1 13:25:40 2008
+	- original version; created by h2xs 1.23 with options
+		-n libg15 Lglcd\lglcd.h
+
+0.02  Thu Jun 4 19:44:33 2009
+	- rellocating namespace.

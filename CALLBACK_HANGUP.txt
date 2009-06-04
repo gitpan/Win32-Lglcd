@@ -1,0 +1,65 @@
+get from : http://markmail.org/message/cwtmw3hqvqhbw7ss#query:PERL%20XS%20SPAGAIN+page:3+mid:m4rw5jwansznmuh6+state:results
+
+Subject:	Re: Calling into perl from multiple pthreads, simultaneouslyLink to this message
+From:	Eric Garland (per...@ericgarland.com)
+Date:	02/02/2006 05:04:44 PM
+List:	org.perl.perl-xs
+
+Why don't you create a single message receiving thread in perl that handles the
+incoming XS calls and have it relay the requests to other worker threads in perl.
+
+That's what I did to multi-thread perlfs. (http://perlfs.sf.net/) The responses
+to the kernel are issued by the worker threads directly but all incoming messages are handled through one thread. I'm not sure
+how the structure of the kernel side of Fuse differs from perlfs but I suspect it's similar.
+
+-Eric
+
+Mark Glines wrote:
+
+Hi!
+
+I've got a question which is halfway between perlxs and perlembed. I'm hoping you guys can help me. :)
+
+I wrote an XS wrapper for FUSE (http://fuse.sf.net) a couple years ago. You "use Fuse;" in your perlscript, and call Fuse::main(). It then maps filesystem calls from a C library (libfuse) into calls to Perl sub refs, with call_sv(). For a long time, the whole thing has been single-threaded, because it was unclear how to call perl from multiple threads concurrently. (Back in the days of perl 5.6.1, I couldn't find anything in the docs about this.)
+
+Recently, I noticed a blurb in perlguts which said all I had to do was do PERL_SET_CONTEXT() and everything would be happy. (This perlguts entry seems unclear as to whether this will work for concurrent calls, or just for the occasional call on its own.) So I tried it. And everything does work, if I put a lock around the whole thing. It crashes horribly if I call into it multiple times concurrently.
+
+So, I did a little more research. It looks like I have to call perl_clone(), but that crashes when I call into it concurrently, too. And this time I have an additional problem: none of the arguments get passed down to the callback sub!
+
+I'm obviously doing something wrong, and I have no idea how to debug this. I've tried boiling things down, I've got a test project which just manages a single callback, with a single argument. Here's what happens when I run it under valgrind (it shows a lost arg, followed by a crash):
+
+calling test_threads interpreter cached (master) Got to callback! Argument = 4658 perl_clone -> 0452c530 Got to callback! Argument = perl_clone -> 04df9708 ==4658== Thread 3: ==4658== Invalid read of size 4 ==4658== at 0x80A02B5: Perl_pad_push (in /usr/bin/perl5.8.7) ==4658== by 0x80CD041: Perl_pp_entersub (in /usr/bin/perl5.8.7) ==4658== by 0x806152E: (within /usr/bin/perl5.8.7) ==4658== by 0x80648F2: Perl_call_sv (in /usr/bin/perl5.8.7) ==4658== by 0x404261C: test_callback (in /home/paranoid/workspace/ithreads-test/Threadtest/blib/arch/auto/Threadtest/Threadtest.so) ==4658== by 0x404228C: do_something (in /home/paranoid/workspace/ithreads-test/Threadtest/blib/arch/auto/Threadtest/Threadtest.so) ==4658== by 0x404A37F: start_thread (in /lib/tls/libpthread-2.3.5.so) ==4658== by 0x417ED1D: clone (in /lib/tls/libc-2.3.5.so) ==4658== Address 0x0 is not stack'd, malloc'd or (recently) free'd ==4658== ==4658== Process terminating with default action of signal 11 (SIGSEGV)
+
+Unfortunately, this tree is still in several files. I'm pasting the XS file and the test.pl script into this email; you can find the rest of the tree at http://glines.org/bin/ithreads-test.tar.gz if needed.
+
+Thanks!
+
+Mark
+
+------ begin Threadtest.xs ------ #include "EXTERN.h" #include "perl.h" #include "XSUB.h"
+
+#include "ppport.h"
+
+#include "const-c.inc"
+
+/* blatant linuxism for test purposes */ #include <linux/unistd.h> #include <errno.h> _syscall0(pid_t,gettid);
+
+/* emulate FUSE; a simple C pthread thing to test concurrency */ #define NUM_THREADS 20 void *do_something(void *arg) { int tid = gettid(); int rv = tid; int (*func)(int) = arg; rv = func(tid); return NULL; } int test_threads(int (*funcptr)(int)) { pthread_t threads[NUM_THREADS]; int i; do_something(funcptr); for(i = 0; i < NUM_THREADS; i++) pthread_create(&threads[i], NULL, &do_something, funcptr); do_something(funcptr); for(i = 0; i < NUM_THREADS; i++) pthread_join(threads[i], NULL); }
+
+/* this is /usr/bin/perl's PerlInterpreter, we clone this for new threads */ PerlInterpreter *master_interp = NULL; /* thread-local storage key to clone PerlInterpreters as necessary*/ pthread_key_t test_interp_key; /* set up our PerlInterpreter state */ static inline void setup_perl_context() { if(master_interp) { PerlInterpreter *me = pthread_getspecific(test_interp_key); if(!me) { PERL_SET_CONTEXT(master_interp); me = perl_clone(master_interp, CLONEf_KEEP_PTR_TABLE); pthread_setspecific(test_interp_key,me); //PERL_SET_CONTEXT(me); fprintf(stderr,"perl_clone -> %08lx\n",(long)me); } else { fprintf(stderr,"interpreter cached (%s)\n", me == master_interp ? "master" : "slave"); } } } /* free our PerlInterpreter when the thread exits */ static void destroy_perl_context(void *ptr) { PerlInterpreter *ctx = ptr; if(ctx && (ctx != master_interp)) { perl_destruct(ctx); perl_free(ctx); fprintf(stderr,"perl_free\n"); } }
+
+/* storage for the callback sub-reference */ static SV *test_callback_SV;
+
+int test_callback(int tid) { int rv; setup_perl_context(); { dSP; ENTER; SAVETMPS; PUSHMARK(SP); XPUSHs(sv_2mortal(newSViv(tid))); PUTBACK; rv = call_sv(test_callback_SV,G_SCALAR); SPAGAIN; if(rv) rv = POPi; else rv = 0; FREETMPS; LEAVE; PUTBACK; } return rv; }
+
+MODULE = Threadtest PACKAGE = Threadtest PROTOTYPES: DISABLE INCLUDE: const-xs.inc
+
+void test_threads(...) CODE: test_callback_SV = ST(0); /* save off the interpreter which we'll clone later on */ master_interp = PERL_GET_INTERP; /* setup the TLS key, so new threads can figure themselves out */ pthread_key_create(&test_interp_key, destroy_perl_context); /* the primary thread uses the primary perl interpreter */ pthread_setspecific(test_interp_key, master_interp); /* this is where FUSE used to get called; we usually segfault here. */ test_threads(&test_callback); /* cleanup */ pthread_key_delete(test_interp_key);
+
+------ end Threadtest.xs ------
+
+------ begin test.pl ------ #!/usr/bin/perl push(@INC,'blib/arch'); push(@INC,'blib/lib'); require Threadtest;
+
+sub cb { my $arg = shift; print(STDERR "Got to callback! Argument = $arg\n"); # this sleep makes the crash happen almost every time select(undef,undef,undef,0.1); return $arg; }
+
+print("calling test_threads\n"); Threadtest::test_threads(\&cb); print("done\n"); ------ end test.pl ------ 

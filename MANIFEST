@@ -1,0 +1,10 @@
+Changes
+Lglcd.xs
+Makefile.PL
+MANIFEST
+ppport.h
+README
+t/01_mod.t
+fallback/const-c.inc
+fallback/const-xs.inc
+lib/Win32/Lglcd.pm

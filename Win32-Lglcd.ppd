@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SOFTPKG NAME="Win32-Lglcd" VERSION="0,02,0,0">
+  <TITLE>Win32-Lglcd</TITLE>
+  <ABSTRACT>Perl extension for writting perl's app for logitech devices.</ABSTRACT>
+  <AUTHOR>Nicolas GEORGES &lt;xlat@cpan.org&gt;</AUTHOR>
+  <IMPLEMENTATION>
+    <OS NAME="MSWin32" />
+    <ARCHITECTURE NAME="MSWin32-x86-multi-thread-5.8" />
+    <CODEBASE HREF="Win32-Lglcd.tar.gz" />
+  </IMPLEMENTATION>
+</SOFTPKG>
