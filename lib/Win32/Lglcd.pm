@@ -95,7 +95,7 @@ our @EXPORT = qw(
 	lgLcdEnumerateEx
 );
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 our @callbacks_ref;
 
 sub AUTOLOAD {
@@ -340,8 +340,6 @@ sub Lglcd{
 }
 1;
 __END__
-# Below is stub documentation for your module. You'd better edit it!
-I'll take time !!!
 
 =head1 NAME
 
@@ -350,19 +348,214 @@ Win32::Lglcd - Perl extension for writting perl's app for logitech devices.
 =head1 SYNOPSIS
 
   use Win32::Lglcd;
-  blah blah blah
+   
+  my $g15 = Win32::Lglcd->new;
+  
+  $g15->init();
+  
+  $g15->connect('App Name');
+
+  sub onSoftButtonChanged{
+    my ($connection, $button, $params) = @_;
+    ...
+    return 0;
+  }
+  
+  $g15->open(callback=>\&onSoftButtonChanged);
+  
+  $g15->foreground();
+  
+  while( ... ){ #App main loop
+  
+    ...  #prepare $pict
+	
+    $g15->sendbmp($pict);
+  
+    Win32::Lglcd::g15_do_event();
+  }
+  
+  $g15->close();
+  
+  $g15->disconnect();
+  
+  $g15->deinit();  
 
 =head1 DESCRIPTION
 
-Stub documentation for Win32::Lglcd, created by h2xs. It looks like the
-author of the extension was negligent enough to leave the stub
-unedited.
+This module provide an interface to Lglcd library from Perl. It's allow to 
+write application that can communicate with the Logitech LCD manager.
 
-Blah blah blah.
+Actually, configuration and notification callbacks are not supported.
+The softbuttons callback work but it need a regular call 
+to Win32::Lglcd::g15_do_event sub.
+
+=head1 FUNCTIONS
+
+=head2 new
+
+Object creator.
+
+  my $lcd = new Win32::Lglcd;
+
+=head2 init
+
+To be called before any other subs.
+
+  $lcd->init;
+
+=head2 deinit
+
+To be called at the end of use of this module, it will free all resources allocated by the library.
+
+  $lcd->deinit;
+
+=head2 get_last_error
+
+Return the last error code
+  my $errcode = $lcd->get_last_error;
+
+=head2 get_error_message ERROR_CODE
+
+Return the error message matching with C<ERROR_CODE>.
+
+  print "Error: " . $lcd->get_error_message( $errcode );
+
+=head2 get_last_error_message
+
+Return the last error message.
+
+  print "Last error: " . $lcd->get_last_error_message;
+
+=head2 use_families FAMILY_TYPE
+
+Set the type of family devices to use, C<FAMILY_TYPE> could one of the following constants:
+
+  LGLCD_DEVICE_FAMILY_JACKBOX
+  LGLCD_DEVICE_FAMILY_KEYBOARD_G15
+  LGLCD_DEVICE_FAMILY_LCDEMULATOR_G15
+  LGLCD_DEVICE_FAMILY_OTHER
+  LGLCD_DEVICE_FAMILY_RAINBOW
+  LGLCD_DEVICE_FAMILY_SPEAKERS_Z10
+
+  $lcd->use_families( LGLCD_DEVICE_FAMILY_LCDEMULATOR_G15 );
+
+=head2 foreground
+
+Ask LCD manager to put application in foreground.
+
+  $lcd->foreground;
+
+=head2 background
+
+Ask LCD manager to put application in background.
+
+  $lcd->background;
+
+=head2 sendbmp PICTURE
+
+Send the C<PICTURE> image to the LCD device, it must have the right format.
+
+  $lcd->sendbmp( $pict );
+
+Tips: you can use the sub C<GD::Image::Lglcd> just provided with this package.
+
+  $lcd->sendbmp( $gdimage->Lglcd );
+
+
+=head2 open index=>value, callback=>{...}, paramcallback=>...
+
+It starts the communication with an attached device.
+
+  index: specifies the index of the device to open.
+
+  callback: a sub onSoftbuttonsChanged take in args (device,dwButtons,context)
+
+  paramcallback: a reference to what you want to retrieve in you callback.
+
+  $lcd->open( callback => &\onSoftbuttons );
+
+=head2 close
+
+Close a connection with LCD manager.
+
+  $lcd->close;
+
+=head2 disconnect
+
+Disconnect current openned connection with a device.
+
+  $lcd->disconnect;
+
+=head2 setfamilies
+
+Used to inform the LCD Manager of what device types the app is interested in using.
+This will filter the result of enumerate and enumerateEx subs.
+
+=head2 connect APPNAME
+
+Establish a connection to the LCD manager, C<APPNAME> is the application name.
+
+  $lcd->connect('Perl Applet');
+
+=head2 enumerate
+
+Retrieve information about all the currently attached and supported LCD devices.
+
+  foreach $dev( $lcd->enumerate ){
+    print 
+      $dev{width} . "x" . 
+      $dev{height} . "x" . 
+      $dev{bpp} . ":" . 
+      $dev{softbuttons}. "\n";
+  }
+
+=head2 enumerateEx
+
+Same as enumerate but with more informations.
+
+  foreach $dev( $lcd->enumerateEx ){
+    print 
+      $dev{displayname} . "(" . 
+      $dev{family} . "," . 
+      $dev{reserved1} . "," . 
+      $dev{reserved2} . "), " . 
+      $dev{width} . "x" . 
+      $dev{height} . "x" . 
+      $dev{bpp} . ":" . 
+      $dev{softbuttons}. "\n";
+  }  
+
+=head2 softbuttons_state
+
+Use to retrieve the state of each soft buttons.
+It return a hash which keys are BUTTON0_PRESSED to BUTTON32_PRESSED.
+
+  my %keys_state = $lcd->softbuttons_state;
+
+=head2 GD::Image::Lglcd
+
+C<GD::Image::Lglcd> provide an helper sub to convert GD picture into a LGLCD compatible bitmap.
+
+  use GD;
+  use Benchmark;
+  use Win32::Lglcd;		#here you include GD::Image::Lglcd sub
+  my $start = new Benchmark;
+  my $im = new GD::Image(160,43,0);
+  my $white = $im->colorAllocate(255,255,255);
+  my $black = $im->colorAllocate(0,0,0);       
+  $im->rectangle(0,0,159,42,$black);
+  $im->filledEllipse(80,21,140,24,$black);
+  $im->string(gdSmallFont,20,15,"LCD Logo",$white);
+  #ConvertData to Lglcd format !
+  $|=1;
+  my $pict = $im->Lglcd( 0=>'_', 1=>'0', eol=>"\n", x=>12, y=>13, width=>80, height=>25, white=>$black );
+  print $pict;
+  my $end = new Benchmark;
+  warn ("Bench = " . timestr( timediff($end, $start) ) . "\n");
 
 =head2 EXPORT
 
-None by default.
+All by default.
 
 =head2 Exportable constants
 
@@ -402,19 +595,75 @@ None by default.
   lgLcdConnectEx
   lgLcdEnumerateEx
 
-
-
-
 =head1 Know bugs
 
-While the applet is running, it crash when softbutton are clicked before the callback of previous as leaved.
-May be a re-entrance matter. It is in my todo list.
+While the applet is running, it crash when softbutton are clicked before 
+the callback of previous as leaved. May be a re-entrance matter.
 
 =head1 TODO List
 
-- improve test units
-- write applet's skeleton / base object
-- avoiding callback re-entrance
+  - write applet's skeleton / base object
+  - add a parameter to choose the way to avoid the callback 're-entrance' 
+crash.
+  - implement configuration and notification callbacks.
+
+=head1 SAMPLE
+
+  use GD;
+  use Win32::Lglcd;
+  use Time::HiRes qw(usleep);
+  
+  $|=1;
+  my $continue_loop = 1;		#Allow to close applet with CTRL+C
+  sub sig_handler {			#1st argument is signal name
+      my($sig) = @_;
+      print "Caught a SIG$sig--shutting down\n";
+      $continue_loop=0;
+  }
+  $SIG{'INT'}  = \&sig_handler;
+  $SIG{'BREAK'} = \&sig_handler;
+  
+  my $delay = 150;
+  sub onSoftButtonChanged{
+  	my ($connection, $button, $params) = @_;
+  	$xinc +=1 if $button==1;
+  	$xinc -=1 if $button==2;
+  	$xinc +=10 if $button==3;
+  	$xinc -=10 if $button==4;
+  	$xinc = 1 if $xinc < 1;
+  	return 0;
+  }
+  
+  my $g15 = Win32::Lglcd->new;
+  $g15->init() or die "can't initialize Win32::Lglcd library!";
+  $g15->connect('ScrollingText') or die "can't connect to Win32::Lglcd!";
+  #~ $g15->use_families(LGLCD_DEVICE_FAMILY_LCDEMULATOR_G15);
+  #~ my @devices = $g15->enumerateEx;
+  #~ use Data::Dumper; print Dumper( @devices );
+  $g15->open(callback=>\&onSoftButtonChanged) or die "can't open specified device!";
+  $g15->foreground();
+  my $im = new GD::Image(320,43,0);
+  my $white = $im->colorAllocate(255,255,255);
+  my $black = $im->colorAllocate(0,0,0);
+  #$im->rectangle(0,0,159,42,$black);
+  $im->string(gdGiantFont,10,5, "Scrolling text - test app - blah -" ,$black);
+  $im->string(gdGiantFont,0,25, "- blah - Scrolling text - test app" ,$black);
+  my $x = 0;
+  our $xinc = 1;
+  while($continue_loop){
+  	$x+=$xinc;
+  	$xinc=-$xinc,$x+=$xinc if $x>=160 or $x<=0;
+  	my $pict = $im->Lglcd( 'x'=> $x );
+  	$g15->sendbmp($pict);
+  	foreach(1..10){
+  		Win32::Lglcd::g15_do_event();	#a internal process message for callbacks (avoid crash)
+  		usleep(50);
+  	}
+  }
+  $g15->close() or die "can't close devices!"; 
+  $g15->disconnect() or die "can't disconnect library Win32::Lglcd!";
+  $g15->deinit() or die "can't free library Win32::Lglcd!";
+  exit;
 
 =head1 SEE ALSO
 
@@ -422,10 +671,6 @@ Mention other useful documentation such as the documentation of
 related modules or operating system documentation (such as man pages
 in UNIX), or any relevant external documentation such as RFCs or
 standards.
-
-If you have a mailing list set up for your module, mention it here.
-
-If you have a web site set up for your module, mention it here.
 
 =head1 AUTHOR
 

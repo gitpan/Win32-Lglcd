@@ -1,4 +1,4 @@
-Win32::Lglcd version 0.01
+Win32::Lglcd version 0.03
 =========================
 
 The README is used to introduce the module and provide instructions on
@@ -12,6 +12,14 @@ archive can use it get an idea of the modules uses. It is usually a
 good idea to provide version information here so that people can
 decide whether fixes for the module are worth downloading.
 
+REQUIERED
+
+Copy into folder ./Lglcd the following files :
+ lglcd.lib
+ lglcd32.lib
+ lglcd64.lib
+ lglcd.h
+ 
 INSTALLATION
 
 To install this module type the following:
@@ -35,7 +43,7 @@ COPYRIGHT AND LICENCE
 
 Put the correct copyright and licence information here.
 
-Copyright (C) 2008 by A. U. Thor
+Copyright (C) 2008 by Nicolas Georges
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.8 or,

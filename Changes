@@ -6,3 +6,6 @@ Revision history for Perl extension Win32::Lglcd.
 
 0.02  Thu Jun 4 19:44:33 2009
 	- rellocating namespace.
+	
+0.03  Sun Jun 7 16:06:00 2009
+	- POD it a bit.

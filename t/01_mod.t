@@ -58,13 +58,14 @@ ok( $g15->connect('test Win32::Lglcd'), 'connect' );
 #print join( '|', $res->appFriendlyName, $res->isPersistent, $res->isAutostartable,$res->onConfigure, $res->connection);
 unless( $g15->enumerate()>0 ){
     #Try to create an emulator...
-    use Win32::API;
-    Win32::API->Import( 'user32', 'HWND FindWindow( LPCTSTR lpClassName, LPCTSTR lpWindowName );' );
-    Win32::API->Import( 'user32', 'LRESULT SendMessage( HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);' ); 
-    my $hwnd = FindWindow( "Logitech LCD Monitor Window", "LCDMon" );
-    SendMessage( $hwnd, 273, 1133, 0 );
-    #let time to LCDMon to create the emulator window before to continue...
-    sleep(1);
+	if( eval 'use Win32::API; 1;' ){
+		Win32::API->Import( 'user32', 'HWND FindWindow( LPCTSTR lpClassName, LPCTSTR lpWindowName );' );
+		Win32::API->Import( 'user32', 'LRESULT SendMessage( HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);' ); 
+		my $hwnd = FindWindow( "Logitech LCD Monitor Window", "LCDMon" );
+		SendMessage( $hwnd, 273, 1133, 0 );
+		#let time to LCDMon to create the emulator window before to continue...
+		sleep(1);
+	}
 }
 ok( $g15->enumerate()>0, 'enumerate' );
 #ok( $g15->use_families(8) ); # 8 => EMULATOR
