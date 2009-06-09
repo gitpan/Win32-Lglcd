@@ -16,8 +16,6 @@ REQUIERED
 
 Copy into folder ./Lglcd the following files :
  lglcd.lib
- lglcd32.lib
- lglcd64.lib
  lglcd.h
  
 INSTALLATION
@@ -25,11 +23,12 @@ INSTALLATION
 To install this module type the following:
 
    perl Makefile.PL
-   make
-   make test
-   make install
+   nmake
+   nmake test
+   nmake install
    
 And evently
+	 nmake dist
    perl -MPPM::Make -e"PPM::Make->new->make_ppm();"
 
 DEPENDENCIES

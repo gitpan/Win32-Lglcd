@@ -62,3 +62,10 @@ else {
     copy ($fallback, $file) or die "Can't copy $fallback to $file: $!";
   }
 }
+
+use File::Copy;
+copy( 'C:\Program Files\Logitech\GamePanel Software\LCD Manager\SDK\SDK\Src\lglcd.h', './Lglcd/lglcd.h' )
+	unless -e './Lglcd/lglcd.h';
+	
+copy( 'C:\Program Files\Logitech\GamePanel Software\LCD Manager\SDK\SDK\Libs\x86\lglcd.lib', './Lglcd/lglcd.lib' )
+	unless -e './Lglcd/lglcd.lib';

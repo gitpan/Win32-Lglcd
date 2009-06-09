@@ -25,3 +25,5 @@ t/01_mod.t
 t/logo_pb.bmp
 t/logo_pb.raw
 t/test.ppm
+Lglcd/.exists
+META.yml                                 Module meta-data (added by MakeMaker)
